@@ -280,7 +280,6 @@ rip은 0x401000에서 잘 실행되다가 0x401008에서 ret를 만나게 된다
 
 
 ---
-
 PE파일
 
 Portable Excutable 파일 은 윈도우 실행파일이라고 부름.
@@ -372,6 +371,24 @@ DOS환경에서 실행되는 코드를 가진 영역이다. 16비트 어셈블�
 
 코드와 데이터의 혼합으로 이루어 졌고, DOS에서 실행하면 This program cannot be run in DOS mode
 출력하고 종료한다고 한다.
+
+
+그 다음 NT Header에 대해 보자
+이 역시 winnt.h에 정의되어 잇음.
+
+구조체 이름은 _IMAGE_NT_HEADERS
+DOS Header의 멤버 중 e_lfanew에 저장된 주솟값이 이 부분을 가리킨다.
+NT Header은 파일 실행에 필요한 정보가 저장되어 있다(중요한 부분)
+NT Header의 구조체에는 총 3개의 멤버로 구성되어 있다.
+
+1. Signature	2.File Header	3.Optional Header
+
+하나씩 알아 보자.
+
+Signature는 제일 첫 멤버로 50 45 00 00 h(헥스라는 뜻인듯) 를 가진다 (변경할 수 없다고 한다.)
+50 45 00 00 은 PE 00 을 뜻함
+
+
 
 
 
