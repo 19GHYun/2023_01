@@ -388,20 +388,174 @@ NT Header의 구조체에는 총 3개의 멤버로 구성되어 있다.
 Signature는 제일 첫 멤버로 50 45 00 00 h(헥스라는 뜻인듯) 를 가진다 (변경할 수 없다고 한다.)
 50 45 00 00 은 PE 00 을 뜻함
 
+NT Header의 File Header
+
+winnt.h 에 구조체가 존재함.
+
+아래 적을 멤버 4가지 -> 정확한 세팅이 아닐 시 정상적으로 파일 실행이 불가. (중요)
+
+---
+
+Machine	- 파일의 실행 대상 플랫폼을 나타냄. 예를들어 Machine이 IMAGE_FILE_MACHINE_I386(0x014c)면 32비트고..
+IA64(0x0200)면 Intel Itanium, AMD64(0x8664)면 x64처럼 플랫폼을 나타냄.
+
+---
+
+NumberOfSections - 코드, 데이터, 리소스 등의 섹션 개수를 뜻함. -> 반드시 0보단 클 것
+
+정의된 섹션 개수 > 실제 섹션 개수 -> 실행 에러
+
+정의된 섹션 개수 < 실제 섹션 개수 -> 정의된 개수만큼 인식이 됨.
+
+---
+
+SizeOfOptionalHeader - 다음에 나오는 Optional Header 구조체의 크기를 알려준다.
+
+---
+
+Characteristics - 파일의 속성을 나타내는 값. 실행파일인지 DLL파일인지 등 정보들이 bit OR연산을 통해 최종값으로 설정됨.
+
+exe파일이면 (0x0002) dll파일이면 (0x2000) 이런 식..
+
+---
+
+TimeDateStamp - 파일의 실행에 영향을 미치지 않는 값. 해당 파일의 빌드 시간을 나타냄.
+
+
+![image](https://github.com/19GHYun/2023_01/assets/94778099/b4de5f32-e239-48b3-94d3-c5e713fbea05)
+
+리틀 엔디안 이니까 저렇게 들어간거임.
+
+처음 2개 -> 뒤에서 01 4C -> x86 -> 32비트
+
+00 03 -> NumberOfSection. 파일에 존재하는 섹션 갯수는 3개
+
+TimeDateStamp -> 그 1초마다 1증가해서 나온 값인듯 하다. 48 02 52 87 이 되겠지. 이건 2008년 어쩌구를 뜻함
+
+Offset to Symbol table -> 00 00 00 00
+
+Number of symbols -> 00 00 00 00
+
+Size of optional header -> 00 E0 -> 다음에 이어지는 Optional Header의 길이는 16 * 14
+
+Characteristics -> 01 0F -> bit or연산 해가지고 이렇게 된거 같은데 아무튼 저거 4개 정의되어 잇다.
+
+---
+
+NT헤더의 Optional Header ㅈㄴ 김
+
+---
+
+Magic - 이 친구가 0x10B면 구조체가 32비트 구조체고 0x20B면 64비트 구조체.
+
+---
+
+AddressOfEntryPoint - 파일이 메모리에 매핑된 후 코드 시작 주소. ImageBase값에 이 값을 더해서 코드 시작 지점을 설정한다.
+
+(Entry Point의 RVA를 가짐)
+
+---
+
+ImageBase - PE파일이 로딩되는 시작 주소.(메모리에)
+
+EXE와 DLL파일은 user memory 영역인 0~ 7FFFFFFF 사이에 위치하고 SYS파일은 Kernel memory영역인 80000000 ~ FFFFFFFF에 로딩된다.
+
+ImageBase 값에 AddressOfEntryPoint값이 더해져서 그 코드가 어디 메모리에 저장되기 시작한지 알 수 있다.
+
+ImageBase들은 같겠지만 프로그램들 마다 AddressOfEntryPoint가 다를 것.
+
+PE파일이 로딩 -> PE파일이 실행 -> 프로세스가 생김 -> 프로세스가 메모리에 로딩 -> EIP레지스터 값이 세팅 -> ImageBase + AddressOfEntryPoint의 값이 셋팅.
+
+그러면 그 프로세스가 실행 될 듯?
+
+---
+
+SetionAlignment, FileAlignment - 메모리/파일에서 섹션의 최소 단위를 나타내며, 이 두개 값은 같거나 다를 수 있음. 각 섹션은 반드시 Alignment의 배수여야 한다.
+
+섹션에서 크기가 남아도 0으로 채워서 Alignment값을 맞춤.
+
+---
+
+SizeOfImage - 메모리에 로딩될 때 가상 메모리에서 PE Image가 차지하는 크기.
+
+일반적으로 파일 크기와 로딩된 크기는 다름. 각 섹션의 로딩 위치와 메모리 점유 크기는 섹션 헤더에 정의된다.
+
+---
+
+SizeOfHeader - PE파일 헤더의 전체 크기. -> FileAlignment의 배수임.
+
+파일 시작에서 SizeOfHeader 옵셋만큼 떨어진 위치에서 첫번째 섹션이 존재한다.
+
+---
+
+Subsystem - 동작 환경을 정의한 것. 이 값을 통해 sys인지 exe인지 dll인지 구분. 0x1이면 sys 0x2면 GUI 0x3이면 CLI
+
+---
+
+NumberOfRvaAndSize - DataDirectory배열의 개수. 일반적으로 16개의 디렉터리를 가지지만 해당 멤버로 디렉터리 수를 정할 수 있음. 이 말은 일반적으로 16이지 16이 아닐 수 있다.
+
+---
+
+DataDirectory
+![image](https://github.com/19GHYun/2023_01/assets/94778099/53879503-0592-4fe1-9025-44cd72684818)
+
+IMAGE_DATA_DIRECTORY구조체의 배열로써 디렉토리 별로 각각의 정보를 담는다.
+
+Export Directory - DLL등의 파일에서 외부에 함수를 공개하기 위한 정보들을 가짐.
+
+Import Directory - 프로그램 실행을 위해 Import하는 DLL이름과 사용할 함수 정보가 담긴 INT주소와 IAT주소 같은 정보가 담김.
+
+TLS Directory - 스레드 지역 저장소 초기화 섹션에 대한 포인트
+
+IAT Directory - IAT의 시작번지를 가리킨다.
+
+https://kit6509.tistory.com/entry/IMAGEDATADIRECTORY-%EA%B5%AC%EC%A1%B0%EC%B2%B4-%EB%B0%B0%EC%97%B4
+
+![image](https://github.com/19GHYun/2023_01/assets/94778099/0077791a-0a26-4103-9495-5fc0ab7a7267)
+
+이렇게 0부터 14까지 15개로 있고 나머지 16번째는 0으로 채워져 있다고 한다.
+
+![image](https://github.com/19GHYun/2023_01/assets/94778099/cb5e45b3-2413-4a02-81b9-003ddccf4653)
+
+처음부터.
+
+magic -> 01 0B  -> IMAGE_OPTIONAL_HEADER32구조체
+
+magic linker version.. minor linker version .. size of code .. size of initialized data .. size of uninitialized data.. 를 지나고
+
+address of entry point -> 00 00 73 9D
+
+base of code .. base of data.. 를 지나고
+
+imagebase -> 01000000 -> DLL파일이라
 
 
 
 
+![image](https://github.com/19GHYun/2023_01/assets/94778099/712eef4b-70cc-4404-bad8-2824e38b1fc6)
+
+section alignment -> 00 00 10 00 -> 최소 단위 16 * 16 * 16.
+
+file alignment -> 00 00 02 00 -> 최소 단위 2 * 16 * 16
+
+major OS version.. minor OS version .. major image version.. minor image version .. major subsystem version.. minor subsystem version.. win32 version value 을 지나고
+
+size of image -> 00 01 40 00 -> 메모리가 로딩될 때 가상 메모리에서 PE Image가 차지하는 크기는 저정도
 
 
 
+![image](https://github.com/19GHYun/2023_01/assets/94778099/250f0186-96e0-4632-87a9-e264146e794e)
 
 
+size of headers -> 00 00 04 00 -> PE Header 의 전체 크기는 00 00 04 00 위의 file alignment의 배수임을 확인 가능
 
+checksum을 지나고
 
+subsystem -> 00 02 -> 동작환경 GUI으로 세팅 되어잇음.
 
+DLL characteristics... size of stack reserve... size of heap reserve... size of heap commit.. loader flags.. 를 지나고
 
-
+number of directories 
 
 
 
